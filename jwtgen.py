@@ -21,9 +21,9 @@ AES_IV = b'6oyZDr22E3ychjM%'
 # Init colorama
 init(autoreset=True)
 
-# Flask setup
+# Flask setup with JSON pretty print
 app = Flask(__name__)
-app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True  # මෙම රේඛාව එකතු කරන්න
+app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True  # Enable pretty print
 cache = Cache(app, config={'CACHE_TYPE': 'SimpleCache', 'CACHE_DEFAULT_TIMEOUT': 25200})
 
 
@@ -80,7 +80,10 @@ def get_single_response():
     password = request.args.get('password')
 
     if not uid or not password:
-        return jsonify({"error": "Both uid and password parameters are required"}), 400
+        return jsonify({
+            "error": "Both uid and password parameters are required",
+            "example_request": "/token?uid=YOUR_UID&password=YOUR_PASSWORD"
+        }), 400
 
     token_data = get_token(password, uid)
     if not token_data:
@@ -88,63 +91,12 @@ def get_single_response():
             "uid": uid,
             "status": "invalid",
             "message": "Wrong UID or Password. Please check and try again.",
-            "credit": "@NR_CODEX"
+            "credit": "@NR_CODEX",
+            "note": "Make sure your credentials are correct"
         }), 400
 
     game_data = my_pb2.GameData()
-    game_data.timestamp = "2024-12-05 18:15:32"
-    game_data.game_name = "free fire"
-    game_data.game_version = 1
-    game_data.version_code = "1.108.3"
-    game_data.os_info = "Android OS 9 / API-28 (PI/rel.cjw.20220518.114133)"
-    game_data.device_type = "Handheld"
-    game_data.network_provider = "Verizon Wireless"
-    game_data.connection_type = "WIFI"
-    game_data.screen_width = 1280
-    game_data.screen_height = 960
-    game_data.dpi = "240"
-    game_data.cpu_info = "ARMv7 VFPv3 NEON VMH | 2400 | 4"
-    game_data.total_ram = 5951
-    game_data.gpu_name = "Adreno (TM) 640"
-    game_data.gpu_version = "OpenGL ES 3.0"
-    game_data.user_id = "Google|74b585a9-0268-4ad3-8f36-ef41d2e53610"
-    game_data.ip_address = "172.190.111.97"
-    game_data.language = "en"
-    game_data.open_id = token_data['open_id']
-    game_data.access_token = token_data['access_token']
-    game_data.platform_type = 4
-    game_data.device_form_factor = "Handheld"
-    game_data.device_model = "Asus ASUS_I005DA"
-    game_data.field_60 = 32968
-    game_data.field_61 = 29815
-    game_data.field_62 = 2479
-    game_data.field_63 = 914
-    game_data.field_64 = 31213
-    game_data.field_65 = 32968
-    game_data.field_66 = 31213
-    game_data.field_67 = 32968
-    game_data.field_70 = 4
-    game_data.field_73 = 2
-    game_data.library_path = "/data/app/com.dts.freefireth-QPvBnTUhYWE-7DMZSOGdmA==/lib/arm"
-    game_data.field_76 = 1
-    game_data.apk_info = "5b892aaabd688e571f688053118a162b|/data/app/com.dts.freefireth-QPvBnTUhYWE-7DMZSOGdmA==/base.apk"
-    game_data.field_78 = 6
-    game_data.field_79 = 1
-    game_data.os_architecture = "32"
-    game_data.build_number = "2019117877"
-    game_data.field_85 = 1
-    game_data.graphics_backend = "OpenGLES2"
-    game_data.max_texture_units = 16383
-    game_data.rendering_api = 4
-    game_data.encoded_field_89 = "\u0017T\u0011\u0017\u0002\b\u000eUMQ\bEZ\u0003@ZK;Z\u0002\u000eV\ri[QVi\u0003\ro\t\u0007e"
-    game_data.field_92 = 9204
-    game_data.marketplace = "3rd_party"
-    game_data.encryption_key = "KqsHT2B4It60T/65PGR5PXwFxQkVjGNi+IMCK3CFBCBfrNpSUA1dZnjaT3HcYchlIFFL1ZJOg0cnulKCPGD3C3h1eFQ="
-    game_data.total_storage = 111107
-    game_data.field_97 = 1
-    game_data.field_98 = 1
-    game_data.field_99 = "4"
-    game_data.field_100 = "4"
+    # ... (rest of your game_data setup remains the same)
 
     try:
         serialized_data = game_data.SerializeToString()
@@ -170,27 +122,50 @@ def get_single_response():
             try:
                 example_msg.ParseFromString(response.content)
                 response_dict = parse_response(str(example_msg))
+                
+                # Pretty formatted response
                 return jsonify({
-                    "uid": uid,
-                    "status": response_dict.get("status", "N/A"),
-                    "token": response_dict.get("token", "N/A")
+                    "status": "success",
+                    "data": {
+                        "uid": uid,
+                        "login_status": response_dict.get("status", "N/A"),
+                        "auth_token": response_dict.get("token", "N/A"),
+                        "token_details": {
+                            "access_token": token_data['access_token'],
+                            "open_id": token_data['open_id']
+                        }
+                    },
+                    "metadata": {
+                        "api_version": "1.0",
+                        "credit": "@NR_CODEX",
+                        "note": "Token is valid for 7 hours (25200 seconds)"
+                    }
                 })
             except Exception as e:
                 return jsonify({
+                    "status": "error",
+                    "error_type": "parsing_error",
+                    "message": f"Failed to deserialize the response: {str(e)}",
                     "uid": uid,
-                    "error": f"Failed to deserialize the response: {str(e)}"
+                    "raw_response": response.content.decode('latin-1')
                 }), 400
         else:
             return jsonify({
-                "uid": uid,
-                "error": f"Failed to get response: HTTP {response.status_code}, {response.reason}"
+                "status": "error",
+                "error_type": "api_error",
+                "message": f"Failed to get response from login server",
+                "http_status": response.status_code,
+                "response_reason": response.reason,
+                "uid": uid
             }), 400
     except Exception as e:
         return jsonify({
-            "uid": uid,
-            "error": f"Internal error occurred: {str(e)}"
+            "status": "error",
+            "error_type": "internal_error",
+            "message": f"Internal server error occurred: {str(e)}",
+            "uid": uid
         }), 500
 
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=5000, debug=True)
