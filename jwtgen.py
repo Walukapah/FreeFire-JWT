@@ -23,6 +23,7 @@ init(autoreset=True)
 
 # Flask setup
 app = Flask(__name__)
+app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True  # මෙම රේඛාව එකතු කරන්න
 cache = Cache(app, config={'CACHE_TYPE': 'SimpleCache', 'CACHE_DEFAULT_TIMEOUT': 25200})
 
 
